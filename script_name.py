@@ -2,6 +2,8 @@
 
 import yaml
 
+from collections import OrderedDict
+
 def get_payload_name(operation_id, type_prefix):
     """Generate a payload name based on the operation ID and type prefix (Request/Response)."""
     if not operation_id:
@@ -86,8 +88,15 @@ def migrate_openapi_spec(old_spec_path, new_spec_path):
                     }
 
     # Save the modified OpenAPI YAML file
+    reordered_spec = OrderedDict()
+    for key in old_spec:
+        if key != 'components':
+            reordered_spec[key] = old_spec[key]
+    reordered_spec['components'] = old_spec['components']
+
+    # Save the modified OpenAPI YAML file
     with open(new_spec_path, 'w') as file:
-        yaml.dump(old_spec, file)
+        yaml.dump(reordered_spec, file)
 
     print(f"New OpenAPI spec saved to {new_spec_path}")
 
