@@ -1,0 +1,55 @@
+!!python/object/apply:collections.OrderedDict
+- - - paths
+    - /v1/payees/{payee-id}/activeEbill/{ebill-id}:
+        get:
+          description: Allows client to get the details of a payee when the payee
+            id is available.
+          operationId: activateEbill
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ActivateEbillRequestPayload'
+            description: abcls
+          responses:
+            '200':
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ActivateEbillResponsePayload'
+              description: Success - returns Payee Details
+          summary: Fetches a payee by Id
+          tags:
+          - ebill
+  - - components
+    - schemas:
+        ActivateEbillRequest:
+          description: anbljnd
+          properties:
+            name:
+              description: alsjlas
+              type: string
+          required:
+          - name
+          type: object
+        ActivateEbillRequestPayload:
+          properties:
+            data:
+              properties:
+                attribute: '#/components/schemas/ActivateEbillRequest'
+              type: object
+          required:
+          - data
+          type: object
+        ActivateEbillResponsePayload:
+          properties:
+            data:
+              properties:
+                attribute:
+                  $ref: ../ /common/shared/v1/shared_defs-yan#/components/schemas/Payee
+              type: object
+            links:
+              $ref: ../../common/shared/v1/shared_defs-yam#/components/schemas/Links
+          required:
+          - data
+          type: object

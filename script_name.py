@@ -1,15 +1,30 @@
-
-
 import yaml
-
 from collections import OrderedDict
+import re
 
-def get_payload_name(operation_id, type_prefix):
-    """Generate a payload name based on the operation ID and type prefix (Request/Response)."""
+def to_camel_case(snake_str):
+    """Convert a snake_case string to CamelCase."""
+    components = snake_str.split('_')
+    return ''.join(x.capitalize() for x in components)
+
+def to_kebab_case(camel_str):
+    """Convert a CamelCase string to kebab-case."""
+    return re.sub(r'(?<!^)(?=[A-Z])', '-', camel_str).lower()
+
+def get_payload_name(operation_id, type_prefix, payload_suffix="Payload"):
+    """
+    Generate a camel-cased payload name based on the operation ID and type prefix (Request/Response).
+    Returns both 'RequestPayload'/'ResponsePayload' and 'Request'/'Response'.
+    """
     if not operation_id:
-        return None
-    entity = operation_id.capitalize()  # Capitalize the operation ID to use in payload names
-    return f"{entity}{type_prefix}Payload"
+        return None, None
+    # Capitalize each word for camel casing (e.g., activateEbill -> ActivateEbill)
+    entity = ''.join(word.capitalize() for word in re.split(r'_|(?=[A-Z])', operation_id))
+    
+    # Create names for both 'RequestPayload'/'ResponsePayload' and 'Request'/'Response'
+    payload_name = f"{entity}{type_prefix}{payload_suffix}"
+    general_name = f"{entity}{type_prefix}"
+    return general_name, payload_name
 
 def migrate_openapi_spec(old_spec_path, new_spec_path):
     # Load the old OpenAPI YAML file
@@ -19,14 +34,19 @@ def migrate_openapi_spec(old_spec_path, new_spec_path):
     # Ensure components and schemas sections exist
     old_spec.setdefault('components', {}).setdefault('schemas', {})
 
-    # Modify the paths to adjust request and response schemas
+    # Modify the paths to adjust request and response schemas and convert IDs to kebab-case
+    new_paths = {}
     for path, methods in old_spec['paths'].items():
+        # Convert path parameters (e.g., /v1/payees/{payeeId}) to kebab-case (e.g., /v1/payees/{payee-id})
+        kebab_path = re.sub(r'{(\w+?)}', lambda m: f"{{{to_kebab_case(m.group(1))}}}", path)
+        new_methods = {}
+
         for method, details in methods.items():
             operation_id = details.get('operationId', '')
 
             # Generate new payload names for request and response
-            request_payload_name = get_payload_name(operation_id, 'Request')
-            response_payload_name = get_payload_name(operation_id, 'Response')
+            request_name, request_payload_name = get_payload_name(operation_id, 'Request')
+            response_name, response_payload_name = get_payload_name(operation_id, 'Response')
 
             # Modify the request body schema
             if 'requestBody' in details:
@@ -87,7 +107,12 @@ def migrate_openapi_spec(old_spec_path, new_spec_path):
                         '$ref': f'#/components/schemas/{response_payload_name}'
                     }
 
-    # Save the modified OpenAPI YAML file
+            new_methods[method] = details
+        new_paths[kebab_path] = new_methods
+
+    old_spec['paths'] = new_paths
+
+    # Reorder the keys to move 'components' to the end
     reordered_spec = OrderedDict()
     for key in old_spec:
         if key != 'components':
@@ -103,4 +128,3 @@ def migrate_openapi_spec(old_spec_path, new_spec_path):
 # Usage
 if __name__ == "__main__":
     migrate_openapi_spec('C:\\Users\\user\\Desktop\\proj\\zisionx\\backend\\old.yaml', 'new_openapi.yaml')
-
