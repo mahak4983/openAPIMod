@@ -80,7 +80,12 @@ def migrate_openapi_spec(old_spec_path, new_spec_path):
             if response_payload_name and 'responses' in details and '200' in details['responses']:
                 response_details = details['responses']['200']
                 if 'content' in response_details and 'application/json' in response_details['content']:
-                    old_response_schema = response_details['content']['application/json']['schema']
+                    # Remove the 'examples' property if it exists
+                    response_content = response_details['content']['application/json']
+                    if 'examples' in response_content:
+                        del response_content['examples']
+
+                    old_response_schema = response_content['schema']
                     
                     # Create new response schema structure with nested 'attribute'
                     new_response_schema = {
